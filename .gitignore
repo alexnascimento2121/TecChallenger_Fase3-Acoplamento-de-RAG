@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+checkpoints_medquad_lora/
+modelo_medquad_lora_final/
+data_curada/
+hospital_prontuarios.db
+auditoria_respostas.jsonl
+*.log

@@ -10,12 +10,16 @@ O desafio simula um hospital que quer avançar na automação de condutas clíni
 de médicos e sugerir procedimentos com base em protocolos internos — sempre com **segurança,
 auditoria e validação humana obrigatória**.
 
-Todo o pipeline (fine-tuning + assistente) está implementado no notebook
-[`tech_challenge_fase3_com_fase2.ipynb`](tech_challenge_fase3_com_fase2.ipynb), organizado em duas
-partes:
+O pipeline (fine-tuning + assistente) está disponível em duas formas equivalentes:
 
-- **Fase 1 — Fine-tuning da LLM** (seções 1 a 14 do notebook)
-- **Fase 2 — Assistente médico com LangChain + LangGraph** (seções 15 a 23 do notebook)
+- **Notebook** [`tech_challenge_fase3_com_fase2.ipynb`](tech_challenge_fase3_com_fase2.ipynb) — versão
+  exploratória já executada (com outputs), pensada para rodar no Google Colab e aproveitar GPU
+  gratuita. Organizada em duas partes:
+  - **Fase 1 — Fine-tuning da LLM** (seções 1 a 14 do notebook)
+  - **Fase 2 — Assistente médico com LangChain + LangGraph** (seções 15 a 23 do notebook)
+- **Pacote Python** [`assistente_medico/`](assistente_medico/) — a mesma lógica modularizada em
+  módulos reutilizáveis, com scripts de linha de comando em [`scripts/`](scripts/). Veja a seção
+  [Estrutura do repositório](#estrutura-do-repositório) e [Como executar](#como-executar).
 
 ## Visão geral da solução
 
@@ -54,6 +58,10 @@ Fluxo LangGraph (StateGraph):
 Resposta final + fontes (explainability) + log de auditoria
 ```
 
+Versão ilustrada (com cores por categoria, dados trocados entre nós e os pontos de logging/auditoria):
+
+![Diagrama do fluxo LangGraph](diagrama_fluxo_langgraph.svg)
+
 ## Requisitos atendidos
 
 | Requisito do desafio | Onde está implementado |
@@ -67,16 +75,42 @@ Resposta final + fontes (explainability) + log de auditoria
 | Logging detalhado e auditoria | `assistente_medico.log` + `auditoria_respostas.jsonl` (seções 16, 20, 21) |
 | Explainability (fonte da informação) | `extrair_fontes` + bloco "Fontes utilizadas" em toda resposta |
 | Fluxos automatizados com LangGraph | `StateGraph` com 8 nós (seção 21) |
+| Projeto modularizado em Python | pacote [`assistente_medico/`](assistente_medico/) + scripts em [`scripts/`](scripts/) |
+| Diagrama do fluxo LangChain/LangGraph | [`diagrama_fluxo_langgraph.svg`](diagrama_fluxo_langgraph.svg) |
 | Relatório técnico | [`RelatorioTecnico_TechChallenge_Fase3.docx.pdf`](RelatorioTecnico_TechChallenge_Fase3.docx.pdf) |
-| Dataset de exemplo | [`QA-TestSet-LiveQA-Med-Qrels-2479-Answers.zip`](QA-TestSet-LiveQA-Med-Qrels-2479-Answers.zip) |
+| Dataset (MedQuAD) | [`medquad.csv`](medquad.csv) — já incluído no repositório |
 
 ## Estrutura do repositório
 
 ```
 .
 ├── tech_challenge_fase3_com_fase2.ipynb               # notebook completo (Fase 1 + Fase 2)
+├── diagrama_fluxo_langgraph.svg                        # diagrama do fluxo LangChain/LangGraph
 ├── RelatorioTecnico_TechChallenge_Fase3.docx.pdf       # relatório técnico da entrega
-├── QA-TestSet-LiveQA-Med-Qrels-2479-Answers.zip        # amostra de dataset médico público (QA)
+├── medquad.csv                                          # dataset público MedQuAD usado no fine-tuning
+├── requirements.txt                                    # dependências do projeto modularizado
+├── pyproject.toml                                       # empacotamento do pacote assistente_medico
+├── assistente_medico/                                   # projeto Python modularizado
+│   ├── config.py                                        # constantes (modelo base, paths, seed, prompt)
+│   ├── logging_utils.py                                 # configuração de logging/auditoria
+│   ├── data/
+│   │   ├── preprocessing.py                             # clean_text, PII_PATTERNS, anonymize
+│   │   └── curation.py                                  # curadoria, split treino/val/teste, dataset
+│   ├── finetuning/
+│   │   ├── model.py                                     # carrega base model + aplica LoRA
+│   │   ├── dataset.py                                   # tokenização
+│   │   ├── train.py                                     # loop de treinamento + salvar adapter
+│   │   └── evaluate.py                                  # perplexidade + avaliação qualitativa
+│   └── assistant/
+│       ├── llm_bridge.py                                # bridge Hugging Face → LangChain
+│       ├── database.py                                  # banco SQLite sintético do hospital
+│       ├── tools.py                                     # tools LangChain (prontuário/exames/protocolos)
+│       ├── guardrails.py                                # guardrails, explainability, auditoria
+│       ├── graph.py                                     # estado + nós + StateGraph (LangGraph)
+│       └── pipeline.py                                  # perguntar_assistente, pipeline_consulta_geral
+├── scripts/
+│   ├── run_finetuning.py                                # CLI: executa a Fase 1 ponta a ponta
+│   └── run_assistant_demo.py                            # CLI: executa a Fase 2 (3 cenários de demo)
 └── README.md
 ```
 
@@ -118,20 +152,17 @@ pip install -q -U "langchain>=0.3" "langchain-core>=0.3" "langchain-community>=0
 
 ### 3. Dataset
 
-O notebook baixa o dataset público **MedQuAD** (perguntas e respostas médicas) via `gdown`:
+O dataset público **MedQuAD** (perguntas e respostas médicas) já está incluído no repositório como
+[`medquad.csv`](medquad.csv) — não é necessário baixar nada para rodar o pipeline de fine-tuning.
+
+Alternativamente, caso queira obter o arquivo a partir da fonte original, ele pode ser baixado via
+`gdown`:
 
 ```bash
 gdown --id "11bG57YsDHlf6S2m1-CuJxuL8wi-4UYmJ"
 ```
 
-Isso gera o arquivo `medquad.csv` na raiz do projeto (mesma pasta do notebook). Alternativamente,
-baixe o MedQuAD diretamente do repositório original
-([abachaa/MedQuAD](https://github.com/abachaa/MedQuAD)) e salve como `medquad.csv`.
-
-O arquivo [`QA-TestSet-LiveQA-Med-Qrels-2479-Answers.zip`](QA-TestSet-LiveQA-Med-Qrels-2479-Answers.zip)
-incluído no repositório é uma amostra pública de perguntas e respostas médicas (conjunto de teste
-LiveQA-Med, com respostas derivadas do MedQuAD), fornecida como exemplo de dados para quem quiser
-explorar o pipeline sem depender do download via `gdown`.
+ou diretamente do repositório original ([abachaa/MedQuAD](https://github.com/abachaa/MedQuAD)).
 
 ### 4. Rodar o notebook
 
@@ -160,7 +191,7 @@ Execute as células em ordem, de cima para baixo:
 | `assistente_medico.log` | Log detalhado de auditoria da Fase 2 (consultas, decisões do grafo, guardrails) |
 | `auditoria_respostas.jsonl` | Trilha de auditoria estruturada de cada interação do assistente |
 
-### 6. Usando o assistente programaticamente
+### 6. Usando o assistente programaticamente (notebook)
 
 Depois de rodar o notebook até o fim da seção 22, a função de alto nível fica disponível:
 
@@ -185,6 +216,41 @@ print(pipeline_consulta_geral(
     "Quais são os sintomas clássicos de glaucoma?",
     termo_protocolo="glaucoma",
 ))
+```
+
+### 7. Rodando como projeto Python modularizado
+
+Alternativa ao notebook: a mesma lógica organizada em módulos (`assistente_medico/`) e dois scripts
+de linha de comando (`scripts/`).
+
+```bash
+pip install -r requirements.txt
+pip install -e .          # torna o pacote assistente_medico importável
+
+# Fase 1 — fine-tuning (gera modelo_medquad_lora_final/, data_curada/ e pipeline_finetuning.log)
+python scripts/run_finetuning.py --csv medquad.csv --max-steps 10
+
+# Fase 2 — assistente (cria hospital_prontuarios.db e executa 3 cenários de demonstração)
+python scripts/run_assistant_demo.py
+```
+
+Também é possível usar os módulos diretamente em código Python:
+
+```python
+from assistente_medico.assistant.database import criar_banco_hospital
+from assistente_medico.assistant.graph import build_graph
+from assistente_medico.assistant.llm_bridge import LLMBridge
+from assistente_medico.assistant.pipeline import perguntar_assistente
+
+criar_banco_hospital()
+llm_bridge = LLMBridge()
+assistente_app = build_graph(llm_bridge)
+
+resultado = perguntar_assistente(
+    assistente_app, llm_bridge, "PAC-001",
+    "Paciente com HAS e queixa de visão turva. Quais próximos passos segundo "
+    "nossos protocolos, considerando exames pendentes?",
+)
 ```
 
 ## Segurança e validação
