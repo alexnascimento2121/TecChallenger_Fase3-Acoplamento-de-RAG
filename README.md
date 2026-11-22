@@ -291,9 +291,5 @@ resultado = perguntar_assistente(
   `TrainingArguments`.
 - A busca de protocolos (`buscar_protocolo`) usa correspondência por palavra-chave (`LIKE`), não
   busca semântica.
-- O mascaramento de PII é feito por expressões regulares e não garante anonimização completa; um
-  teste registrado no relatório também identificou um caso em que a detecção textual de sugestão de
-  prescrição não capturou o padrão de risco (o aviso de revisão humana, porém, continuou sendo
-  exibido).
 - Resultados e exemplos ainda não foram validados clinicamente por especialistas — o protótipo é
   experimental e não deve orientar condutas reais.
