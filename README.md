@@ -75,6 +75,7 @@ Versão ilustrada (com cores por categoria, dados trocados entre nós e os ponto
 | Logging detalhado e auditoria | `assistente_medico.log` + `auditoria_respostas.jsonl` (seções 16, 20, 21) |
 | Explainability (fonte da informação) | `extrair_fontes` + bloco "Fontes utilizadas" em toda resposta |
 | Fluxos automatizados com LangGraph | `StateGraph` com 8 nós (seção 21) |
+| Etapa 3 — validação de entrada/saída e auditoria | Seções 24–26 do notebook — [`validation_etapa3.py`](assistente_medico/assistant/validation_etapa3.py), 11 cenários de teste |
 | Projeto modularizado em Python | pacote [`assistente_medico/`](assistente_medico/) + scripts em [`scripts/`](scripts/) |
 | Diagrama do fluxo LangChain/LangGraph | [`diagrama_fluxo_langgraph.svg`](diagrama_fluxo_langgraph.svg) |
 | Relatório técnico | [`RelatorioTecnico_TechChallenge_Fase3.docx.pdf`](RelatorioTecnico_TechChallenge_Fase3.docx.pdf) |
@@ -107,10 +108,12 @@ Versão ilustrada (com cores por categoria, dados trocados entre nós e os ponto
 │       ├── tools.py                                     # tools LangChain (prontuário/exames/protocolos)
 │       ├── guardrails.py                                # guardrails, explainability, auditoria
 │       ├── graph.py                                     # estado + nós + StateGraph (LangGraph)
-│       └── pipeline.py                                  # perguntar_assistente, pipeline_consulta_geral
+│       ├── pipeline.py                                  # perguntar_assistente, pipeline_consulta_geral
+│       └── validation_etapa3.py                         # validação de entrada/saída, auditoria da Etapa 3
 ├── scripts/
 │   ├── run_finetuning.py                                # CLI: executa a Fase 1 ponta a ponta
-│   └── run_assistant_demo.py                            # CLI: executa a Fase 2 (3 cenários de demo)
+│   ├── run_assistant_demo.py                            # CLI: executa a Fase 2 (3 cenários de demo)
+│   └── run_etapa3_demo.py                               # CLI: roda os 11 cenários de teste da Etapa 3
 └── README.md
 ```
 
@@ -220,7 +223,7 @@ print(pipeline_consulta_geral(
 
 ### 7. Rodando como projeto Python modularizado
 
-Alternativa ao notebook: a mesma lógica organizada em módulos (`assistente_medico/`) e dois scripts
+Alternativa ao notebook: a mesma lógica organizada em módulos (`assistente_medico/`) e três scripts
 de linha de comando (`scripts/`).
 
 ```bash
@@ -232,6 +235,12 @@ python scripts/run_finetuning.py --csv medquad.csv --max-steps 10
 
 # Fase 2 — assistente (cria hospital_prontuarios.db e executa 3 cenários de demonstração)
 python scripts/run_assistant_demo.py
+
+# Etapa 3 — camada de segurança (roda os 11 cenários controlados, sem precisar de GPU/LLM)
+python scripts/run_etapa3_demo.py
+
+# Etapa 3 com o grafo real (carrega a LLM e consulta o assistente de verdade)
+python scripts/run_etapa3_demo.py --live
 ```
 
 Também é possível usar os módulos diretamente em código Python:
@@ -265,6 +274,32 @@ resultado = perguntar_assistente(
 - Cada resposta final lista explicitamente as fontes utilizadas (prontuário, exames e protocolos
   internos), atendendo ao requisito de explainability.
 
+### Etapa 3 — Camada de segurança e validação
+
+Implementada no notebook (seções 24–26) e modularizada em
+[`assistente_medico/assistant/validation_etapa3.py`](assistente_medico/assistant/validation_etapa3.py)
+(execute com [`scripts/run_etapa3_demo.py`](scripts/run_etapa3_demo.py)). Foi implementada uma
+camada de segurança para controlar as solicitações e validar as respostas geradas pelo
+assistente. As principais funcionalidades são:
+
+- **Validação de entrada:** identifica solicitações de prescrição, doses e condutas clínicas,
+  bloqueando solicitações inadequadas antes da chamada à LLM.
+- **Validação de saída:** verifica o vínculo com o paciente, identifica conteúdo inadequado e
+  impede a publicação de informações sem evidência.
+- **Conferência de fontes:** publica somente exames e protocolos confirmados na base de dados,
+  preservando a rastreabilidade das informações.
+- **Auditoria:** registra cada consulta por meio de UUID no arquivo `auditoria_etapa3.jsonl`,
+  permitindo acompanhar as decisões do fluxo.
+- **Revisão humana:** respostas não aprovadas pelas validações são retidas e encaminhadas para
+  revisão.
+
+**Testes:** foram executados 11 cenários controlados, com 11 aprovações, contemplando
+solicitações de prescrição, doses, informações sem evidência, prontuários incorretos e falhas de
+execução.
+
+A implementação não substitui a avaliação de profissionais de saúde e utiliza exclusivamente
+dados sintéticos.
+
 ## Dados e privacidade
 
 - O dataset de treinamento (MedQuAD) é público e não contém dados de pacientes reais.
@@ -291,5 +326,11 @@ resultado = perguntar_assistente(
   `TrainingArguments`.
 - A busca de protocolos (`buscar_protocolo`) usa correspondência por palavra-chave (`LIKE`), não
   busca semântica.
+- Algumas respostas apresentaram imprecisões e termos inadequados nos testes realizados.
+- O mascaramento de PII por expressões regulares não garante anonimização completa.
+- Um teste identificou um caso em que a detecção textual de uma sugestão de prescrição não
+  capturou o padrão de risco, embora o aviso de revisão humana tenha sido exibido mesmo assim.
+- A apresentação de fontes indica os dados recuperados, mas não comprova que todas as afirmações
+  da resposta estejam de fato fundamentadas nelas (limite da explainability).
 - Resultados e exemplos ainda não foram validados clinicamente por especialistas — o protótipo é
   experimental e não deve orientar condutas reais.

@@ -18,6 +18,7 @@ ADAPTER_DIR = Path("modelo_medquad_lora_final")
 DATA_DIR = Path("data_curada")
 DB_PATH = Path("hospital_prontuarios.db")
 AUDIT_JSONL = Path("auditoria_respostas.jsonl")
+ETAPA3_AUDIT_JSONL = Path("auditoria_etapa3.jsonl")
 
 FINETUNING_LOG = "pipeline_finetuning.log"
 ASSISTENTE_LOG = "assistente_medico.log"
