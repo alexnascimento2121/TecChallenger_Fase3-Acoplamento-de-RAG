@@ -1,11 +1,13 @@
-<svg viewBox="0 0 1000 1400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fluxo do assistente médico orquestrado pelo LangGraph: do recebimento da pergunta à geração da sugestão com guardrails, auditoria e validação humana obrigatória">
-  <title>Fluxo do assistente médico — LangGraph (StateGraph)</title>
+<svg viewBox="0 0 1000 1943" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fluxo completo do assistente médico: a camada de validação da Etapa 3 valida a entrada, executa o StateGraph da Fase 2 e valida e filtra a saída antes de responder, sempre exigindo revisão humana e registrando auditoria">
+  <title>Fluxo do assistente médico — Etapa 3 (validação) + Fase 2 (LangGraph)</title>
   <desc>
-    Pipeline sequencial de 8 nós executado pelo StateGraph do LangGraph: recebe a solicitação,
-    consulta prontuário, exames e protocolos via tools LangChain em um SQLite sintético, monta o
-    contexto do paciente, gera uma sugestão com a LLM fine-tuned, aplica guardrails de segurança
-    (disclaimer obrigatório, detecção de linguagem de prescrição) e emite alertas, sempre exigindo
-    validação humana e registrando tudo em log e auditoria.
+    consultar_com_validacao recebe paciente e pergunta, bloqueia entradas inválidas ou de risco
+    (verificar_entrada_etapa3), executa o StateGraph de 8 nós da Fase 2 (consulta prontuário,
+    exames e protocolos via tools LangChain em um SQLite sintético, monta contexto, gera sugestão
+    com a LLM fine-tuned, aplica guardrails e emite alertas), e em seguida valida o retorno
+    (verificar_retorno_etapa3) e confere quais itens citados existem de fato no cadastro
+    (conferir_itens_etapa3) antes de montar a resposta final numerada ou reter a consulta
+    (encerrar_etapa3), sempre exigindo revisão humana e registrando tudo em auditoria_etapa3.jsonl.
   </desc>
 
   <defs>
@@ -14,136 +16,133 @@
     </marker>
   </defs>
 
-  <rect x="0" y="0" width="1000" height="1400" fill="#ffffff"/>
+  <rect x="0" y="0" width="1000" height="1943" fill="#ffffff"/>
 
-  <text x="500" y="34" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#0f172a">
-    Assistente médico — fluxo LangGraph (StateGraph)
-  </text>
-  <text x="500" y="56" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#64748b">
-    8 nós sequenciais · estado compartilhado AssistenteState · guardrails + auditoria em todo o percurso
-  </text>
-
-  <!-- START -->
-  <rect x="420" y="72" width="160" height="42" rx="21" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
-  <text x="500" y="98" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">START</text>
-
-  <!-- arrow START -> 1 -->
-  <line x1="500" y1="114" x2="500" y2="163" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-
-  <!-- Node 1: receber_solicitacao -->
-  <rect x="300" y="163" width="400" height="66" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
-  <text x="500" y="190" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a">receber_solicitacao</text>
-  <text x="500" y="210" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">gera request_id · inicia alertas/logs_fluxo</text>
-
-  <!-- arrow 1 -> 2 -->
-  <line x1="500" y1="229" x2="500" y2="286" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="515" y="261" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">paciente_id</text>
-
-  <!-- Node 2: consultar_prontuario -->
-  <rect x="300" y="286" width="400" height="66" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
-  <text x="500" y="313" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">consultar_prontuario</text>
-  <text x="500" y="333" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e3a8a">tool consultar_paciente → EHR (SQLite)</text>
-
-  <!-- arrow 2 -> 3 -->
-  <line x1="500" y1="352" x2="500" y2="409" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="515" y="384" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">prontuário</text>
-
-  <!-- Node 3: verificar_exames -->
-  <rect x="300" y="409" width="400" height="66" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
-  <text x="500" y="436" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">verificar_exames</text>
-  <text x="500" y="456" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e3a8a">tool listar_exames → define exames_urgentes_pendentes</text>
-
-  <!-- arrow 3 -> 4 -->
-  <line x1="500" y1="475" x2="500" y2="532" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="515" y="507" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">pergunta + diagnósticos</text>
-
-  <!-- Node 4: buscar_protocolos -->
-  <rect x="300" y="532" width="400" height="66" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
-  <text x="500" y="559" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">buscar_protocolos</text>
-  <text x="500" y="579" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e3a8a">tool buscar_protocolo → protocolos internos</text>
-
-  <!-- arrow 4 -> 5 -->
-  <line x1="500" y1="598" x2="500" y2="655" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="515" y="630" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">protocolos</text>
-
-  <!-- Node 5: montar_contexto -->
-  <rect x="300" y="655" width="400" height="66" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
-  <text x="500" y="682" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a">montar_contexto</text>
-  <text x="500" y="702" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">junta prontuário + exames + protocolos · extrai fontes</text>
-
-  <!-- arrow 5 -> 6 -->
-  <line x1="500" y1="721" x2="500" y2="778" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="515" y="753" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">contexto + fontes</text>
-
-  <!-- Node 6: gerar_sugestao (LLM) -->
-  <rect x="300" y="778" width="400" height="66" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
-  <text x="500" y="805" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#4c1d95">gerar_sugestao</text>
-  <text x="500" y="825" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#4c1d95">LLM fine-tuned (LoRA) + contexto do paciente</text>
-
-  <!-- arrow 6 -> 7 -->
-  <line x1="500" y1="844" x2="500" y2="901" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="515" y="876" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">resposta_bruta</text>
-
-  <!-- Node 7: validar_seguranca (guardrails) -->
-  <rect x="300" y="901" width="400" height="66" rx="10" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
-  <text x="500" y="928" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#7c2d12">validar_seguranca</text>
-  <text x="500" y="948" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#7c2d12">guardrails: disclaimer obrigatório + detecção de padrões de risco</text>
-
-  <!-- arrow 7 -> 8 -->
-  <line x1="500" y1="967" x2="500" y2="1024" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="515" y="999" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">resposta_final + precisa_revisao_humana=True</text>
-
-  <!-- Node 8: emitir_alerta -->
-  <rect x="300" y="1024" width="400" height="66" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
-  <text x="500" y="1051" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#7f1d1d">emitir_alerta</text>
-  <text x="500" y="1071" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#7f1d1d">alerta à equipe + fila de validação humana</text>
-
-  <!-- arrow 8 -> END -->
-  <line x1="500" y1="1090" x2="500" y2="1147" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="515" y="1122" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">alertas + fontes + logs_fluxo</text>
-
-  <!-- END -->
-  <rect x="420" y="1147" width="160" height="42" rx="21" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
-  <text x="500" y="1173" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">END</text>
-
-  <!-- Callout: auditoria_respostas.jsonl ao lado do nó 8 -->
-  <line x1="700" y1="1057" x2="758" y2="1057" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="715" y="1048" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#7f1d1d">grava evento</text>
-  <rect x="758" y="1027" width="210" height="60" rx="8" fill="#fff1f2" stroke="#dc2626" stroke-width="1.5"/>
-  <text x="863" y="1052" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7f1d1d">auditoria_respostas.jsonl</text>
-  <text x="863" y="1070" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#7f1d1d">1 evento JSON por interação</text>
-
-  <!-- Bracket direito: tools LangChain (nós 2-4) -->
-  <line x1="770" y1="286" x2="770" y2="598" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="4 4"/>
-  <line x1="770" y1="286" x2="755" y2="286" stroke="#2563eb" stroke-width="1.5"/>
-  <line x1="770" y1="598" x2="755" y2="598" stroke="#2563eb" stroke-width="1.5"/>
-  <text x="790" y="432" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#1e3a8a">Tools LangChain →</text>
-  <text x="790" y="450" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e3a8a">SQLite hospital_</text>
-  <text x="790" y="466" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e3a8a">prontuarios.db</text>
-
-  <!-- Bracket esquerdo: logging (nós 1-8) -->
-  <line x1="230" y1="163" x2="230" y2="1090" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 4"/>
-  <line x1="230" y1="163" x2="245" y2="163" stroke="#64748b" stroke-width="1.5"/>
-  <line x1="230" y1="1090" x2="245" y2="1090" stroke="#64748b" stroke-width="1.5"/>
-  <text x="212" y="620" text-anchor="end" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#334155">assistente_medico.log</text>
-  <text x="212" y="638" text-anchor="end" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">(cada nó grava sua</text>
-  <text x="212" y="654" text-anchor="end" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#334155">execução — auditoria técnica)</text>
-
-  <!-- Legenda -->
-  <text x="300" y="1225" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Legenda</text>
-
-  <rect x="300" y="1240" width="18" height="18" rx="3" fill="#f1f5f9" stroke="#64748b"/>
-  <text x="326" y="1253" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">Controle de fluxo</text>
-
-  <rect x="300" y="1266" width="18" height="18" rx="3" fill="#dbeafe" stroke="#2563eb"/>
-  <text x="326" y="1279" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">Consulta a dados estruturados (SQLite via tools LangChain)</text>
-
-  <rect x="300" y="1292" width="18" height="18" rx="3" fill="#ede9fe" stroke="#7c3aed"/>
-  <text x="326" y="1305" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">Geração de resposta via LLM fine-tuned (LoRA)</text>
-
-  <rect x="300" y="1318" width="18" height="18" rx="3" fill="#ffedd5" stroke="#ea580c"/>
-  <text x="326" y="1331" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">Guardrails de segurança / explainability</text>
-
-  <rect x="300" y="1344" width="18" height="18" rx="3" fill="#fee2e2" stroke="#dc2626"/>
-  <text x="326" y="1357" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">Alertas, auditoria e validação humana obrigatória</text>
+<text x="500" y="32" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">Assistente médico — fluxo completo: validação (Etapa 3) envolvendo o LangGraph (Fase 2)</text>
+<text x="500" y="54" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="400" fill="#64748b">consultar_com_validacao() valida a entrada, executa o StateGraph e valida/filtra a saída antes de responder</text>
+<rect x="420" y="76" width="160" height="42" rx="21" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
+<text x="500" y="103" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Pergunta do médico + paciente_id</text>
+<line x1="500" y1="118" x2="500" y2="163" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="142" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">consultar_com_validacao(paciente, pergunta)</text>
+<rect x="300.0" y="165" width="400" height="70" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+<text x="500.0" y="194.4" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#78350f">verificar_entrada_etapa3</text>
+<text x="500.0" y="215.4" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#78350f">bloqueia paciente inválido, pergunta vazia ou termo de risco</text>
+<line x1="700.0" y1="200" x2="760.0" y2="200" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="730.0" y="192" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#78350f">motivo de entrada</text>
+<rect x="760.0" y="160" width="220" height="80" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="870.0" y="185" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7f1d1d">Retida</text>
+<text x="870.0" y="203" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#7f1d1d">identificador_invalido,</text>
+<text x="870.0" y="219" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#7f1d1d">pergunta_vazia ou</text>
+<text x="870.0" y="235" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#7f1d1d">entrada_prescricao_ou_conduta</text>
+<line x1="500" y1="235" x2="500" y2="278" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="259" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">ok → segue para o grafo</text>
+<rect x="220.0" y="280" width="540.0" height="1078" rx="14" fill="none" stroke="#1e293b" stroke-width="1.5"/>
+<text x="310.0" y="302" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f172a">FASE 2 — LangGraph (StateGraph, 8 nós)</text>
+<rect x="420" y="314" width="160" height="40" rx="20" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
+<text x="500" y="339" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f172a">START</text>
+<line x1="500" y1="354" x2="500" y2="397" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="300.0" y="399" width="400" height="66" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
+<text x="500.0" y="426.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a">receber_solicitacao</text>
+<text x="500.0" y="446.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#0f172a">gera request_id · inicia alertas/logs_fluxo</text>
+<line x1="500" y1="465" x2="500" y2="510" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="489" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">paciente_id</text>
+<rect x="300.0" y="512" width="400" height="66" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+<text x="500.0" y="539.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">consultar_prontuario</text>
+<text x="500.0" y="559.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e3a8a">tool consultar_paciente → EHR (SQLite)</text>
+<line x1="500" y1="578" x2="500" y2="623" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="602" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">prontuário</text>
+<rect x="300.0" y="625" width="400" height="66" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+<text x="500.0" y="652.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">verificar_exames</text>
+<text x="500.0" y="672.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e3a8a">tool listar_exames → define exames_urgentes_pendentes</text>
+<line x1="500" y1="691" x2="500" y2="736" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="715" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">pergunta_medico + prontuário</text>
+<rect x="300.0" y="738" width="400" height="66" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+<text x="500.0" y="765.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">buscar_protocolos</text>
+<text x="500.0" y="785.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e3a8a">tool buscar_protocolo → protocolos internos</text>
+<line x1="500" y1="804" x2="500" y2="849" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="828" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">protocolos</text>
+<rect x="300.0" y="851" width="400" height="66" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
+<text x="500.0" y="878.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a">montar_contexto</text>
+<text x="500.0" y="898.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#0f172a">junta prontuário + exames + protocolos · extrai fontes</text>
+<line x1="500" y1="917" x2="500" y2="962" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="941" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">contexto + fontes</text>
+<rect x="300.0" y="964" width="400" height="66" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+<text x="500.0" y="991.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#4c1d95">gerar_sugestao</text>
+<text x="500.0" y="1011.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#4c1d95">LLM fine-tuned (LoRA) + contexto do paciente</text>
+<line x1="500" y1="1030" x2="500" y2="1075" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="1054" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">resposta_bruta</text>
+<rect x="300.0" y="1077" width="400" height="66" rx="10" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+<text x="500.0" y="1104.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#7c2d12">validar_seguranca</text>
+<text x="500.0" y="1124.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#7c2d12">guardrails: disclaimer obrigatório + detecção de padrões de risco</text>
+<line x1="500" y1="1143" x2="500" y2="1188" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="1167" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">resposta_final + precisa_revisao_humana</text>
+<rect x="300.0" y="1190" width="400" height="66" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+<text x="500.0" y="1217.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#7f1d1d">emitir_alerta</text>
+<text x="500.0" y="1237.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#7f1d1d">alerta à equipe + fila de validação humana</text>
+<line x1="500" y1="1256" x2="500" y2="1301" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="1280" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">alertas + fontes + logs_fluxo</text>
+<rect x="420" y="1303" width="160" height="40" rx="20" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
+<text x="500" y="1328" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f172a">END</text>
+<line x1="700.0" y1="1223" x2="758.0" y2="1223" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="715.0" y="1214" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#7f1d1d">grava evento</text>
+<rect x="758.0" y="1187" width="210" height="60" rx="8" fill="#fff1f2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="863.0" y="1212" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7f1d1d">auditoria_respostas.jsonl</text>
+<text x="863.0" y="1230" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#7f1d1d">1 evento JSON por interação</text>
+<line x1="760.0" y1="512" x2="760.0" y2="804" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="760.0" y1="512" x2="745.0" y2="512" stroke="#2563eb" stroke-width="1.5"/>
+<line x1="760.0" y1="804" x2="745.0" y2="804" stroke="#2563eb" stroke-width="1.5"/>
+<text x="780.0" y="650.0" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#1e3a8a">Tools LangChain →</text>
+<text x="780.0" y="668.0" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e3a8a">SQLite hospital_</text>
+<text x="780.0" y="684.0" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e3a8a">prontuarios.db</text>
+<line x1="230.0" y1="399" x2="230.0" y2="1256" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="230.0" y1="399" x2="245.0" y2="399" stroke="#64748b" stroke-width="1.5"/>
+<line x1="230.0" y1="1256" x2="245.0" y2="1256" stroke="#64748b" stroke-width="1.5"/>
+<text x="212.0" y="819.5" text-anchor="end" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#334155">assistente_medico.log</text>
+<text x="212.0" y="837.5" text-anchor="end" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">(cada nó grava sua</text>
+<text x="212.0" y="853.5" text-anchor="end" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">execução — auditoria técnica)</text>
+<line x1="500" y1="1343" x2="500" y2="1401" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="1367" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">resposta_final + flags do fluxo</text>
+<rect x="300.0" y="1403" width="400" height="66" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+<text x="500.0" y="1430.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#78350f">verificar_retorno_etapa3</text>
+<text x="500.0" y="1450.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#78350f">confere se o prontuário é do paciente certo e se o rascunho tem termo de risco</text>
+<line x1="700.0" y1="1436" x2="760.0" y2="1436" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="730.0" y="1428" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#78350f">motivo de saída</text>
+<rect x="760.0" y="1401" width="220" height="70" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="870.0" y="1423" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7f1d1d">Retida</text>
+<text x="870.0" y="1441" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#7f1d1d">prontuario_nao_confirmado</text>
+<text x="870.0" y="1457" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#7f1d1d">ou saida_prescricao_ou_conduta</text>
+<line x1="500" y1="1469" x2="500" y2="1512" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="1493" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">ok → confere fontes citadas</text>
+<rect x="300.0" y="1514" width="400" height="66" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text x="500.0" y="1541.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">conferir_itens_etapa3</text>
+<text x="500.0" y="1561.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e3a8a">mantém só exames/protocolos citados pelo nome que existem no cadastro (SQLite)</text>
+<line x1="700.0" y1="1547" x2="760.0" y2="1547" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="730.0" y="1539" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#7f1d1d">sem itens</text>
+<rect x="760.0" y="1512" width="220" height="46" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="870.0" y="1532" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7f1d1d">Retida:</text>
+<text x="870.0" y="1550" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#7f1d1d">sem_evidencia_correspondente</text>
+<line x1="500" y1="1580" x2="500" y2="1623" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="515" y="1604" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#334155">itens confirmados</text>
+<rect x="300.0" y="1625" width="400" height="66" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="500.0" y="1652.72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a">encerrar_etapa3</text>
+<text x="500.0" y="1672.52" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#0f172a">resposta com fontes numeradas [1][2] · revisao_humana=True sempre</text>
+<line x1="700.0" y1="1658" x2="760.0" y2="1658" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="730.0" y="1650" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#78350f">grava evento</text>
+<rect x="760.0" y="1622" width="220" height="60" rx="8" fill="#fffbeb" stroke="#b45309" stroke-width="1.5"/>
+<text x="870.0" y="1644" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#78350f">auditoria_etapa3.jsonl</text>
+<text x="870.0" y="1662" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#78350f">um evento por etapa</text>
+<text x="870.0" y="1677" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#78350f">(entrada → decisão)</text>
+<text x="300.0" y="1751" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Legenda</text>
+<rect x="300.0" y="1767" width="18" height="18" rx="3" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
+<text x="326.0" y="1780" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e293b">Controle de fluxo</text>
+<rect x="300.0" y="1793" width="18" height="18" rx="3" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+<text x="326.0" y="1806" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e293b">Consulta/conferência de dados estruturados (SQLite)</text>
+<rect x="300.0" y="1819" width="18" height="18" rx="3" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="326.0" y="1832" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e293b">Geração de resposta via LLM fine-tuned (LoRA)</text>
+<rect x="300.0" y="1845" width="18" height="18" rx="3" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
+<text x="326.0" y="1858" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e293b">Guardrails de segurança dentro do grafo (Fase 2)</text>
+<rect x="300.0" y="1871" width="18" height="18" rx="3" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+<text x="326.0" y="1884" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e293b">Validação de entrada/saída da Etapa 3 (fora do grafo)</text>
+<rect x="300.0" y="1897" width="18" height="18" rx="3" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="326.0" y="1910" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#1e293b">Alertas, auditoria, retenção e validação humana obrigatória</text>
 </svg>
